@@ -193,7 +193,7 @@ class SwinUNet(nn.Module):
         out_channels: int = 3,
         base_dim: int = 96,
         base_layers: int = 2,
-        scale: int = 1,
+        scale: int = 4,
     ):
         super().__init__()
         self.unet = SwinUNetBase(

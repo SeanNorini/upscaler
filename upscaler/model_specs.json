@@ -1,6 +1,7 @@
 {
     "Waifu_4x": {
         "load": {
+            "download_url": "https://huggingface.co/smnorini/waifu_4x/resolve/main/Waifu_4x.pth",
             "arch": "SwinUNet",
             "model_args": {
                 "scale": 4,
@@ -14,6 +15,7 @@
 
     "Real_ESRGAN_Video_4x": {
         "load": {
+            "download_url": "https://huggingface.co/smnorini/Real_ESRGAN_Video_4x/resolve/main/Real_ESRGAN_Video_4x.pth",
             "arch": "Spandrel",
             "model_args": {}
         }
@@ -21,6 +23,7 @@
 
     "Real_CUGAN_4x": {
         "load": {
+            "download_url": "https://huggingface.co/smnorini/Real_CUGAN_4x/resolve/main/Real_CUGAN_4x.pth",
             "arch": "Spandrel",
             "model_args": {}
         }

@@ -43,8 +43,8 @@ def get_files(path):
     return folder_path, files
 
 
-def upscale_image(img, output_path):
-    img = upscale(img, "Real_ESRGAN_Video_4x", 2048)
+def upscale_image(img, model_name, output_path):
+    img = upscale(img, model_name, 2048)
     img = cv.cvtColor(img, cv.COLOR_RGB2BGR)
     cv.imwrite(output_path, img, [cv.IMWRITE_PNG_COMPRESSION, 0])
 
@@ -62,7 +62,7 @@ def main():
         file_name, file_extension = os.path.splitext(file)
         output_path = os.path.join(args.output, file_name)
 
-        upscale_image(img, output_path + ".png")
+        upscale_image(img, args.model, output_path + ".png")
 
         print(
             f"Finished processing {file} ({count}/{total}). Processing took {time.time() - file_start} seconds."
