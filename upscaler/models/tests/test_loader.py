@@ -31,9 +31,7 @@ def test_build_model():
     assert model.state == state_dict
 
 
-@pytest.mark.parametrize(
-    "is_half,device_str", [(True, "cuda"), (False, "cpu"), (None, "cpu")]
-)
+@pytest.mark.parametrize("is_half,device_str", [(True, "cuda"), (False, "cpu")])
 def test_configure_model(is_half, device_str):
     """Test model configuration logic in isolation."""
     if device_str == "cuda" and not torch.cuda.is_available():

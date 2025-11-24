@@ -1,11 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import Tensor
 from torchvision.models.swin_transformer import SwinTransformerBlock
 
 
 class SwinTransformerBlocks(nn.Module):
-    def __init__(self, in_channels, num_head, num_layers, window_size):
+    def __init__(
+        self, in_channels: int, num_head: int, num_layers: int, window_size: list[int]
+    ):
         super().__init__()
 
         layers = []
@@ -25,7 +28,7 @@ class SwinTransformerBlocks(nn.Module):
             )
         self.block = nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         z = self.block(x)
         return z
 
@@ -43,7 +46,7 @@ class PatchDown(nn.Module):
         nn.init.kaiming_normal_(self.conv.weight, mode="fan_out", nonlinearity="relu")
         nn.init.constant_(self.conv.bias, 0)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         x = x.permute(0, 3, 1, 2).contiguous()  # BHWC->BCHW
         x = self.conv(x)
         x = x.permute(0, 2, 3, 1).contiguous()  # BCHW->BHWC
@@ -51,7 +54,7 @@ class PatchDown(nn.Module):
 
 
 class PatchUp(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels: int, out_channels: int):
         super().__init__()
         self.out_channels = out_channels
         self.proj = nn.Linear(in_channels, out_channels * 4)
@@ -61,7 +64,7 @@ class PatchUp(nn.Module):
         nn.init.xavier_uniform_(self.proj.weight)
         nn.init.constant_(self.proj.bias, 0)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         x = self.proj(x)
         x = x.permute(0, 3, 1, 2)  # BHWC->BCHW
         x = F.pixel_shuffle(x, 2)
@@ -70,7 +73,7 @@ class PatchUp(nn.Module):
 
 
 class ToImage(nn.Module):
-    def __init__(self, in_channels, out_channels, scale_factor):
+    def __init__(self, in_channels: int, out_channels: int, scale_factor: int):
         super().__init__()
         assert scale_factor in {1, 2, 4}
         self.scale_factor = scale_factor
@@ -88,7 +91,7 @@ class ToImage(nn.Module):
                 nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, 0)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         x = self.proj(x)
         x = x.permute(0, 3, 1, 2).contiguous()  # BCHW
         if self.scale_factor > 1:
@@ -98,7 +101,12 @@ class ToImage(nn.Module):
 
 class SwinUNetBase(nn.Module):
     def __init__(
-        self, in_channels=3, out_channels=3, base_dim=96, base_layers=2, scale_factor=1
+        self,
+        in_channels: int,
+        out_channels: int,
+        base_dim: int,
+        base_layers: int,
+        scale_factor: int,
     ):
         super().__init__()
         assert scale_factor in {1, 2, 4}
@@ -155,7 +163,7 @@ class SwinUNetBase(nn.Module):
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         x2 = self.patch(x)
         x2 = F.pad(x2, (-6, -6, -6, -6))
         H, W = x2.shape[2], x2.shape[3]
@@ -181,11 +189,11 @@ class SwinUNetBase(nn.Module):
 class SwinUNet(nn.Module):
     def __init__(
         self,
-        in_channels=3,
-        out_channels=3,
-        base_dim=96,
-        base_layers=2,
-        scale=1,
+        in_channels: int = 3,
+        out_channels: int = 3,
+        base_dim: int = 96,
+        base_layers: int = 2,
+        scale: int = 1,
     ):
         super().__init__()
         self.unet = SwinUNetBase(
@@ -196,6 +204,6 @@ class SwinUNet(nn.Module):
             scale_factor=scale,
         )
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         z = self.unet(x)
         return torch.clamp(z, 0, 1)
