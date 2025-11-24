@@ -1,0 +1,28 @@
+{
+    "Waifu_4x": {
+        "load": {
+            "arch": "SwinUNet",
+            "model_args": {
+                "scale": 4,
+                "offset": 8
+            }
+        },
+        "config": {
+            "offset": 8
+        }
+    },
+
+    "Real_ESRGAN_Video_4x": {
+        "load": {
+            "arch": "Spandrel",
+            "model_args": {}
+        }
+    },
+
+    "Real_CUGAN_4x": {
+        "load": {
+            "arch": "Spandrel",
+            "model_args": {}
+        }
+    }
+}
