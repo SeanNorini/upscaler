@@ -1,87 +1,95 @@
 import pytest
 import torch
-from typing import Any
 
 from upscaler.models.loader import ExtendedModelLoader
 
 
-class DummyReturn:
-    """Object returned by the mocked parent loader."""
+def test_build_model():
+    """Test model construction without any file I/O."""
 
-    def __init__(self, model: Any):
-        self.model = model
+    class TestModel:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            self.state = None
 
+        def load_state_dict(self, state, strict=True):
+            self.state = state
 
-class FakeModel:
-    """A minimal pytorch-like model for testing."""
+    registry = {"arch": "TestModel", "param1": "value1"}
+    state_dict = {"weight": torch.randn(10, 10)}
 
-    def __init__(self, arch):
-        self.arch = arch
-        self.to_called_with = None
-        self.eval_called = False
-        self.half_called = False
-
-    def to(self, device):
-        self.to_called_with = device
-        return self
-
-    def eval(self):
-        self.eval_called = True
-        return self
-
-    def half(self):
-        self.half_called = True
-        return self
-
-
-@pytest.fixture
-def base_registry():
-    return {
-        "spandrel_model": {"arch": "Spandrel", "ext": ".safetensors"},
-        "spandrel_half": {"arch": "Spandrel", "ext": ".safetensors", "is_half": True},
-    }
-
-
-@pytest.fixture
-def loader(base_registry):
-    device = torch.device("cpu")
-    ld = ExtendedModelLoader(
-        model_specs=base_registry,
-        device=device,
-        weights_only=True,
-    )
-    return ld
-
-
-def test_load_spandrel(loader, mocker):
-    fake_model = FakeModel("Spandrel")
-    dummy_return = DummyReturn(fake_model)
-
-    mocker.patch(
-        "upscaler.models.loader.ModelLoader.load_from_file",
-        return_value=dummy_return,
+    loader = ExtendedModelLoader(
+        model_specs={"test": registry},
+        device=torch.device("cpu"),
+        architecture_registry={"TestModel": TestModel},
     )
 
-    model = loader.load_from_file("spandrel_model")
+    model = loader._build_model(registry, state_dict)
 
-    assert model.arch == "Spandrel"
+    assert isinstance(model, TestModel)
+    assert model.kwargs == registry
+    assert model.state == state_dict
 
 
 @pytest.mark.parametrize(
-    "model_name,expected", [("spandrel_model", False), ("spandrel_half", True)]
+    "is_half,device_str", [(True, "cuda"), (False, "cpu"), (None, "cpu")]
 )
-def test_loads_model_with_correctly(model_name, expected, loader, mocker):
-    fake_model = FakeModel("Spandrel")
-    dummy_return = DummyReturn(fake_model)
+def test_configure_model(is_half, device_str):
+    """Test model configuration logic in isolation."""
+    if device_str == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA not available")
 
-    mocker.patch(
-        "upscaler.models.loader.ModelLoader.load_from_file",
-        return_value=dummy_return,
+    class MockModel:
+        def __init__(self):
+            self.device = None
+            self.is_eval = False
+            self.is_half = False
+
+        def to(self, device):
+            self.device = device
+            return self
+
+        def eval(self):
+            self.is_eval = True
+            return self
+
+        def half(self):
+            self.is_half = True
+            return self
+
+    loader = ExtendedModelLoader(model_specs={}, device=torch.device(device_str))
+
+    model = MockModel()
+    configured = loader._configure_model(model, {"is_half": is_half})
+
+    assert configured.device == torch.device(device_str)
+    assert configured.is_eval
+    assert configured.is_half == (is_half if is_half else False)
+
+
+def test_loader_uses_default_architectures():
+    """Test that default architecture registry is used when none provided."""
+    loader = ExtendedModelLoader(
+        model_specs={},
+        device=torch.device("cpu"),
     )
 
-    model = loader.load_from_file(model_name)
+    assert "SwinUNet" in loader._architectures
+    from upscaler.models.swin_unet import SwinUNet
 
-    assert model.half_called is expected
-    assert model.to_called_with == torch.device("cpu")
-    assert model.eval_called is True
-    assert model is fake_model
+    assert loader._architectures["SwinUNet"] is SwinUNet
+
+
+def test_build_model_invalid_architecture():
+    """Test error handling when architecture is not in registry."""
+    registry = {"arch": "NonExistentModel"}
+    state_dict = {}
+
+    loader = ExtendedModelLoader(
+        model_specs={"test": registry},
+        device=torch.device("cpu"),
+        architecture_registry={"SomeOtherModel": object},
+    )
+
+    with pytest.raises(KeyError):
+        loader._build_model(registry, state_dict)
