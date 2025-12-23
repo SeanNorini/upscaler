@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "upscaler"
-version = "1.0"
-description = "An image upscaling library with a unified interface for multiple model architectures."
+name = "image_enhancement"
+version = "0.2.0"
+description = "An image enhancement library."
 authors =  ["Sean Norini <snorini@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "upscaler" }]
+packages = [{ include = "image_enhancement" }]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.15"
