@@ -6,9 +6,11 @@ from numpy.typing import NDArray
 from torch import Tensor
 import torch.nn.functional as F
 
-from upscaler.models.loader import ExtendedModelLoader
-from upscaler.models.wrapper import ModelWrapper
-from upscaler.utils import resize, to_tensor, to_rgb, SeamBlending
+from image_enhancement.upscaler.io import image_to_tensor, tensor_to_rgb
+from image_enhancement.upscaler.models.loader import ExtendedModelLoader
+from image_enhancement.upscaler.models.wrapper import ModelWrapper
+from image_enhancement.upscaler.seam_blending import SeamBlending
+from image_enhancement.upscaler.utils import resize
 
 _upscaler = None
 
@@ -55,15 +57,15 @@ class Upscaler:
         model_variant: str,
         output_device: str = "cpu",
     ) -> NDArray[np.uint8]:
-        rgb_tensor = to_tensor(img)
+        tensor = image_to_tensor(img)
 
         assert not torch.is_grad_enabled()
-        assert rgb_tensor.shape[0] == 3
+        assert tensor.shape[0] == 3
 
-        rgb_tensor = rgb_tensor.to(self.device)
-        rgb = self._render(rgb_tensor, model_variant).to(output_device)
+        tensor = tensor.to(self.device)
+        tensor = self._render(tensor, model_variant).to(output_device)
 
-        return to_rgb(rgb)
+        return tensor_to_rgb(tensor)
 
     def __call__(self, img, model_name):
         return self.process(img, model_name)

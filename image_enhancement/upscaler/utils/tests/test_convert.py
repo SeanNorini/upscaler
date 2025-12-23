@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import pytest
 
-from upscaler.utils import to_tensor, to_rgb
+from image_enhancement.upscaler.utils import to_tensor, to_rgb
 
 
 @pytest.mark.parametrize("shape", [(32, 32, 3), (10, 40, 3), (128, 64, 3)])

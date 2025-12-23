@@ -1,12 +1,12 @@
-import os
 from pathlib import Path
 from typing import Optional
 
 import torch
 from spandrel import ModelLoader
 
-from upscaler.models.swin_unet import SwinUNet
-from upscaler.models.wrapper import ModelWrapper
+from image_enhancement.common.download_model import download_model
+from image_enhancement.upscaler.models.swin_unet import SwinUNet
+from image_enhancement.upscaler.models.wrapper import ModelWrapper
 
 _architectures = {"SwinUNet": SwinUNet}
 
@@ -34,7 +34,8 @@ class ExtendedModelLoader(ModelLoader):
 
         model_path = self._folder_path / (model_name + load_cfg.get("ext", ".pth"))
 
-        self._ensure_exists(model_name, model_path, load_cfg)
+        if not model_path.exists():
+            download_model(model_name, model_path, load_cfg)
 
         if load_cfg["arch"] == "Spandrel":
             model = super().load_from_file(model_path).model
@@ -46,30 +47,6 @@ class ExtendedModelLoader(ModelLoader):
 
         model = self._configure_model(model, load_cfg)
         return ModelWrapper(model, **config_cfg)
-
-    def _ensure_exists(self, model_name: str, model_path: Path, spec: dict):
-        if model_path.exists():
-            return
-
-        url = spec.get("download_url")
-        if url is None:
-            raise FileNotFoundError(
-                f"Model '{model_name}' not found at {model_path} "
-                f"and no 'download_url' provided."
-            )
-
-        self._download_model(url, model_path)
-
-    @staticmethod
-    def _download_model(url: str, dest: Path):
-        import requests
-
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        print(f"Downloading model from {url} to {dest}...")
-
-        r = requests.get(url, timeout=30)
-        r.raise_for_status()
-        dest.write_bytes(r.content)
 
     def _build_model(self, cfg: dict, state_dict: dict):
         """Build model from architecture and state dict."""

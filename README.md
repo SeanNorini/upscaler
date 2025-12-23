@@ -17,7 +17,8 @@ This project provides:
 Define models and their configs in `model_specs.json`, then upscale using:
 
 ```python
-from upscaler import upscale
+from image_enhancement.upscaler import upscale
+
 result = upscale(img, "Real_ESRGAN_Video_4x")
 ```
 
@@ -38,7 +39,7 @@ If a `target_size` is provided, the longest image side is cropped down after the
 ### **Python API**
 
 ```python
-from upscaler import upscale
+from image_enhancement.upscaler import upscale
 import cv2 as cv
 
 img = cv.imread("input.png", cv.IMREAD_COLOR)

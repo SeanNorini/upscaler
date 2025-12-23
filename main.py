@@ -2,12 +2,14 @@ import argparse
 import os
 import time
 import cv2 as cv
+import numpy as np
 
-from upscaler import upscale
+from image_enhancement.scunet import denoise
+from image_enhancement.upscaler import upscale
 
 
-def get_args():
-    parser = argparse.ArgumentParser(description="Image upscaler")
+def get_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Image enhancer")
     parser.add_argument(
         "-i", "--input", default="./images", help="Path to input image or folder"
     )
@@ -30,48 +32,69 @@ def get_args():
         default="Real_ESRGAN_Video_4x",
         help="Upscaling model to use",
     )
+    parser.add_argument(
+        "--mode",
+        choices=["upscale", "denoise"],
+        default="upscale",
+        help="Processing mode",
+    )
+    parser.add_argument(
+        "--strength",
+        type=int,
+        choices=[15, 25, 50],
+        default=15,
+        help="Denoising strength (only used in denoise mode)",
+    )
     return parser.parse_args()
 
 
-def get_files(path):
+def get_files(path: str) -> tuple[str, list[str]]:
     if os.path.isdir(path):
-        folder_path = path
-        files = os.listdir(path)
-    else:
-        folder_path = os.path.dirname(path)
-        files = [os.path.basename(path)]
-    return folder_path, files
+        return path, os.listdir(path)
+    return os.path.dirname(path), [os.path.basename(path)]
 
 
-def upscale_image(img, model_name, output_path):
-    img = upscale(img, model_name, 2048)
-    img = cv.cvtColor(img, cv.COLOR_RGB2BGR)
-    cv.imwrite(output_path, img, [cv.IMWRITE_PNG_COMPRESSION, 0])
+def process_image(img: np.ndarray, args: argparse.Namespace) -> np.ndarray:
+    if args.mode == "upscale":
+        return upscale(img, args.model, args.size)
+
+    if args.mode == "denoise":
+        return denoise(img, strength=args.strength)
+
+    raise ValueError(f"Unsupported mode: {args.mode}")
 
 
-def main():
+def main() -> None:
     args = get_args()
     folder_path, files = get_files(args.input)
 
-    count = 1
-    total = len(files)
-    batch_start = time.time()
-    for file in files:
-        file_start = time.time()
-        img = cv.imread(os.path.join(folder_path, file), cv.IMREAD_COLOR_RGB)
-        file_name, file_extension = os.path.splitext(file)
-        output_path = os.path.join(args.output, file_name)
+    os.makedirs(args.output, exist_ok=True)
 
-        upscale_image(img, args.model, output_path + ".png")
+    total: int = len(files)
+    batch_start: float = time.time()
 
-        print(
-            f"Finished processing {file} ({count}/{total}). Processing took {time.time() - file_start} seconds."
+    for idx, file in enumerate(files, start=1):
+        file_start: float = time.time()
+
+        img = cv.imread(
+            os.path.join(folder_path, file),
+            cv.IMREAD_COLOR_RGB,
         )
-        count += 1
+        if img is None:
+            print(f"Skipping unreadable file: {file}")
+            continue
 
-    print(
-        f"Finished processing {total} files. Processing took {time.time() - batch_start} seconds."
-    )
+        result: np.ndarray = process_image(img, args)
+        result = cv.cvtColor(result, cv.COLOR_RGB2BGR)
+
+        name, _ = os.path.splitext(file)
+        output_path: str = os.path.join(args.output, f"{name}.png")
+
+        cv.imwrite(output_path, result, [cv.IMWRITE_PNG_COMPRESSION, 0])
+
+        print(f"Finished {file} ({idx}/{total}) " f"in {time.time() - file_start:.2f}s")
+
+    print(f"Finished processing {total} files " f"in {time.time() - batch_start:.2f}s")
 
 
 if __name__ == "__main__":

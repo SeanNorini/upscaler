@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from upscaler.models.loader import ExtendedModelLoader
+from image_enhancement.upscaler.models.loader import ExtendedModelLoader
 
 
 def test_build_model():
@@ -73,7 +73,7 @@ def test_loader_uses_default_architectures():
     )
 
     assert "SwinUNet" in loader._architectures
-    from upscaler.models.swin_unet import SwinUNet
+    from image_enhancement.upscaler.models.swin_unet import SwinUNet
 
     assert loader._architectures["SwinUNet"] is SwinUNet
 

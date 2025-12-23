@@ -1,8 +1,7 @@
 import numpy as np
-import cv2 as cv
 import pytest
 
-from upscaler.utils import resize
+from image_enhancement.upscaler.utils import resize
 
 
 @pytest.mark.parametrize(
